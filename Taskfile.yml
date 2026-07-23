@@ -1,0 +1,14 @@
+version: "3"
+
+tasks:
+  run:
+    - go run ./main.go tests/testdata/book.txt
+    - diff decoded_result tests/testdata/book.txt
+
+  lint:
+    - golangci-lint fmt
+    - golangci-lint run --enable-only tagalign,whitespace,nlreturn --fix
+    - golangci-lint run
+
+  test:
+    - go test ./... -v
