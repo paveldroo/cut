@@ -2,7 +2,7 @@ version: "3"
 
 tasks:
   run:
-    - go run ./main.go -f2 tests/testdata/sample.tsv
+    - go run ./main.go -f1 -d, tests/testdata/fourchords.csv
 
   lint:
     - golangci-lint fmt
