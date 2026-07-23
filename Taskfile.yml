@@ -2,8 +2,7 @@ version: "3"
 
 tasks:
   run:
-    - go run ./main.go tests/testdata/book.txt
-    - diff decoded_result tests/testdata/book.txt
+    - go run ./main.go -f2 tests/testdata/sample.tsv
 
   lint:
     - golangci-lint fmt
