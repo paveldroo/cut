@@ -16,6 +16,44 @@ type Config struct {
 }
 
 func main() {
+	cfg, err := readArgs()
+	if err != nil {
+		fmt.Fprintln(os.Stderr, fmt.Errorf("read arguments: %w", err))
+		os.Exit(1)
+	}
+
+	var file *os.File
+
+	if cfg.fname == "" || cfg.fname == "-" {
+		file = os.Stdin
+	} else {
+		file, err = os.Open(cfg.fname)
+		if err != nil {
+			fmt.Fprintln(os.Stderr, fmt.Errorf("open file %s: %w", cfg.fname, err))
+			os.Exit(1)
+		}
+		defer func() {
+			err := file.Close()
+			if err != nil {
+				log.Fatalf("close file descriptor: %s", err.Error())
+			}
+		}()
+	}
+
+	buffer, err := cut(cfg, file)
+	if err != nil {
+		fmt.Fprintln(os.Stderr, fmt.Errorf("cut data: %w", err))
+		os.Exit(1)
+	}
+
+	_, err = fmt.Fprint(os.Stdout, buffer.String())
+	if err != nil {
+		fmt.Fprintln(os.Stderr, fmt.Errorf("print result to stdout: %w", err))
+		os.Exit(1)
+	}
+}
+
+func readArgs() (*Config, error) {
 	args := os.Args[1:]
 	if len(args) == 0 {
 		log.Fatal("you should provide arguments")
@@ -43,7 +81,7 @@ func main() {
 			for _, idx := range idxList {
 				fieldNo, err := strconv.Atoi(idx)
 				if err != nil {
-					log.Fatalf("string conversion of %s to integer", fieldNoStr)
+					return nil, fmt.Errorf("string conversion of %s to integer", fieldNoStr)
 				}
 
 				var fieldIdx int
@@ -61,7 +99,7 @@ func main() {
 
 		if delimiter, ok := strings.CutPrefix(arg, "-d"); ok {
 			if len(delimiter) == 0 {
-				log.Fatal("specify delimiter or don't use -d at all")
+				return nil, fmt.Errorf("specify delimiter or don't use -d at all")
 			}
 			cfg.delimiter = delimiter
 
@@ -72,25 +110,15 @@ func main() {
 	}
 
 	if cfg.fieldIdx == nil {
-		log.Fatalf("no -f argument was found in args: %v", args)
+		return nil, fmt.Errorf("no -f argument was found in args: %v", args)
 	}
 
-	var (
-		err  error
-		file *os.File
-	)
+	return &cfg, nil
+}
 
-	if cfg.fname == "" || cfg.fname == "-" {
-		file = os.Stdin
-	} else {
-		file, err = os.Open(cfg.fname)
-		if err != nil {
-			log.Fatalf("open file %s: %s", cfg.fname, err.Error())
-		}
-	}
-
+func cut(cfg *Config, file *os.File) (*strings.Builder, error) {
 	s := bufio.NewScanner(file)
-
+	b := strings.Builder{}
 	for s.Scan() {
 		line := s.Text()
 		splits := strings.Split(line, cfg.delimiter)
@@ -113,6 +141,15 @@ func main() {
 			}
 		}
 
-		fmt.Printf("%s\n", l.String())
+		_, err := fmt.Fprintf(&b, "%s\n", l.String())
+		if err != nil {
+			return nil, fmt.Errorf("write to string builder: %w", err)
+		}
 	}
+
+	if s.Err() != nil {
+		return nil, fmt.Errorf("scanning data: %w", s.Err())
+	}
+
+	return &b, nil
 }
