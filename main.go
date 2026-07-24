@@ -17,7 +17,7 @@ type Config struct {
 
 func main() {
 	args := os.Args[1:]
-	if len(args) <= 1 {
+	if len(args) == 0 {
 		log.Fatal("you should provide arguments")
 	}
 
@@ -30,17 +30,14 @@ func main() {
 	for _, arg := range args {
 		if fieldNoStr, ok := strings.CutPrefix(arg, "-f"); ok {
 			idxList := []string{}
-			splits := strings.Split(fieldNoStr, `"`)
-			if len(splits) == 1 {
-				if len(splits[0]) == 1 {
-					idxList = append(idxList, splits[0])
-				} else {
-					splits = strings.Split(splits[0], " ")
-					if len(splits) == 1 {
-						splits = strings.Split(splits[0], ",")
-					}
-					idxList = append(idxList, splits...)
+			if len(fieldNoStr) == 1 {
+				idxList = append(idxList, fieldNoStr)
+			} else {
+				splits := strings.Split(fieldNoStr, " ")
+				if len(splits) == 1 {
+					splits = strings.Split(splits[0], ",")
 				}
+				idxList = append(idxList, splits...)
 			}
 
 			for _, idx := range idxList {
@@ -63,6 +60,9 @@ func main() {
 		}
 
 		if delimiter, ok := strings.CutPrefix(arg, "-d"); ok {
+			if len(delimiter) == 0 {
+				log.Fatal("specify delimiter or don't use -d at all")
+			}
 			cfg.delimiter = delimiter
 
 			continue
