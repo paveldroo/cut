@@ -11,7 +11,7 @@ import (
 
 type Config struct {
 	fname     string
-	fieldIdx  *int
+	fieldIdx  []int
 	delimiter string
 }
 
@@ -35,12 +35,28 @@ func main() {
 		}
 
 		if fieldNoStr, ok := strings.CutPrefix(arg, "-f"); ok {
-			fieldNo, err := strconv.Atoi(fieldNoStr)
-			if err != nil {
-				log.Fatalf("string conversion of %s to integer", fieldNoStr)
+			idxList := []string{}
+			splits := strings.Split(fieldNoStr, `"`)
+			if len(splits) == 1 {
+				if len(splits[0]) == 1 {
+					idxList = append(idxList, splits[0])
+				} else {
+					splits = strings.Split(splits[0], " ")
+					if len(splits) == 1 {
+						splits = strings.Split(splits[0], ",")
+					}
+					idxList = append(idxList, splits...)
+				}
 			}
-			fieldIdx := fieldNo - 1
-			cfg.fieldIdx = &fieldIdx
+
+			for _, idx := range idxList {
+				fieldNo, err := strconv.Atoi(idx)
+				if err != nil {
+					log.Fatalf("string conversion of %s to integer", fieldNoStr)
+				}
+				fieldIdx := fieldNo - 1
+				cfg.fieldIdx = append(cfg.fieldIdx, fieldIdx)
+			}
 
 			continue
 		}
@@ -73,12 +89,19 @@ func main() {
 			continue
 		}
 
-		if len(splits) < *cfg.fieldIdx+1 {
-			fmt.Println("")
+		l := strings.Builder{}
 
-			continue
+		for i, idx := range cfg.fieldIdx {
+			if len(splits) < idx+1 {
+				continue
+			}
+			if i == len(cfg.fieldIdx)-1 {
+				l.WriteString(splits[idx])
+			} else {
+				l.WriteString(splits[idx] + cfg.delimiter)
+			}
 		}
 
-		fmt.Printf("%v\n", splits[*cfg.fieldIdx])
+		fmt.Printf("%s\n", l.String())
 	}
 }
