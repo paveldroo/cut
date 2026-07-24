@@ -72,10 +72,9 @@ func main() {
 		log.Fatalf("no -f argument was found in args: %v", args)
 	}
 
-	fname := args[len(args)-1]
-	file, err := os.Open(fname)
+	file, err := os.Open(cfg.fname)
 	if err != nil {
-		log.Fatalf("open file %s: %s", fname, err.Error())
+		log.Fatalf("open file %s: %s", cfg.fname, err.Error())
 	}
 
 	s := bufio.NewScanner(file)
