@@ -3,6 +3,7 @@ package main
 import (
 	"bufio"
 	"fmt"
+	"io"
 	"log"
 	"os"
 	"strconv"
@@ -35,20 +36,16 @@ func main() {
 		defer func() {
 			err := file.Close()
 			if err != nil {
-				log.Fatalf("close file descriptor: %s", err.Error())
+				log.Printf("close file descriptor: %s", err.Error())
 			}
 		}()
 	}
 
-	buffer, err := cut(cfg, file)
+	w := bufio.NewWriter(os.Stdout)
+	r := bufio.NewReader(file)
+	err = cut(w, r, cfg)
 	if err != nil {
 		fmt.Fprintln(os.Stderr, fmt.Errorf("cut data: %w", err))
-		os.Exit(1)
-	}
-
-	_, err = fmt.Fprint(os.Stdout, buffer.String())
-	if err != nil {
-		fmt.Fprintln(os.Stderr, fmt.Errorf("print result to stdout: %w", err))
 		os.Exit(1)
 	}
 }
@@ -56,7 +53,7 @@ func main() {
 func readArgs() (*Config, error) {
 	args := os.Args[1:]
 	if len(args) == 0 {
-		log.Fatal("you should provide arguments")
+		return nil, fmt.Errorf("you should provide some arguments")
 	}
 
 	cfg := Config{
@@ -84,12 +81,11 @@ func readArgs() (*Config, error) {
 					return nil, fmt.Errorf("string conversion of %s to integer", fieldNoStr)
 				}
 
-				var fieldIdx int
-				if fieldNo == 0 {
-					fieldIdx = 0
-				} else {
-					fieldIdx = fieldNo - 1
+				if fieldNo < 1 {
+					return nil, fmt.Errorf("values may not include zero")
 				}
+
+				fieldIdx := fieldNo - 1
 
 				cfg.fieldIdx = append(cfg.fieldIdx, fieldIdx)
 			}
@@ -116,19 +112,21 @@ func readArgs() (*Config, error) {
 	return &cfg, nil
 }
 
-func cut(cfg *Config, file *os.File) (*strings.Builder, error) {
-	s := bufio.NewScanner(file)
-	b := strings.Builder{}
+func cut(w io.Writer, r io.Reader, cfg *Config) error {
+	s := bufio.NewScanner(r)
 	for s.Scan() {
+		l := strings.Builder{}
+
 		line := s.Text()
 		splits := strings.Split(line, cfg.delimiter)
 		if len(splits) == 1 {
-			fmt.Printf("%v\n", splits[0])
+			_, err := fmt.Fprintf(w, "%v\n", splits[0])
+			if err != nil {
+				return fmt.Errorf("write to stdout: %w", err)
+			}
 
 			continue
 		}
-
-		l := strings.Builder{}
 
 		for i, idx := range cfg.fieldIdx {
 			if len(splits) < idx+1 {
@@ -141,15 +139,20 @@ func cut(cfg *Config, file *os.File) (*strings.Builder, error) {
 			}
 		}
 
-		_, err := fmt.Fprintf(&b, "%s\n", l.String())
+		_, err := fmt.Fprintf(w, "%s\n", l.String())
 		if err != nil {
-			return nil, fmt.Errorf("write to string builder: %w", err)
+			return fmt.Errorf("write to stdout: %w", err)
+		}
+
+		err = w.(*bufio.Writer).Flush()
+		if err != nil {
+			return fmt.Errorf("flush stdout wrapper: %w", err)
 		}
 	}
 
 	if s.Err() != nil {
-		return nil, fmt.Errorf("scanning data: %w", s.Err())
+		return fmt.Errorf("scanning data: %w", s.Err())
 	}
 
-	return &b, nil
+	return nil
 }
