@@ -27,13 +27,7 @@ func main() {
 		delimiter: "	", // tab by default
 	}
 
-	for i, arg := range args {
-		if i == len(args)-1 {
-			cfg.fname = arg
-
-			continue
-		}
-
+	for _, arg := range args {
 		if fieldNoStr, ok := strings.CutPrefix(arg, "-f"); ok {
 			idxList := []string{}
 			splits := strings.Split(fieldNoStr, `"`)
@@ -66,15 +60,26 @@ func main() {
 
 			continue
 		}
+
+		cfg.fname = arg
 	}
 
 	if cfg.fieldIdx == nil {
 		log.Fatalf("no -f argument was found in args: %v", args)
 	}
 
-	file, err := os.Open(cfg.fname)
-	if err != nil {
-		log.Fatalf("open file %s: %s", cfg.fname, err.Error())
+	var (
+		err  error
+		file *os.File
+	)
+
+	if cfg.fname == "" || cfg.fname == "-" {
+		file = os.Stdin
+	} else {
+		file, err = os.Open(cfg.fname)
+		if err != nil {
+			log.Fatalf("open file %s: %s", cfg.fname, err.Error())
+		}
 	}
 
 	s := bufio.NewScanner(file)

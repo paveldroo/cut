@@ -4,8 +4,11 @@ tasks:
   run:
     # - go run ./main.go -f1 -d, tests/testdata/fourchords.csv | head -n5
     # - go run ./main.go -f1,2 tests/testdata/sample.tsv
-    - go run ./main.go -d, -f"1 2" tests/testdata/fourchords.csv | head -n5
     # - go run ./main.go -d, -f"100 2" tests/testdata/fourchords.csv | head -n5
+    - go run ./main.go -d, -f"1 2" tests/testdata/fourchords.csv | head -n5
+    # - tail -n5 tests/testdata/fourchords.csv | go run ./main.go -d, -f"1 2"
+    # - tail -n5 tests/testdata/fourchords.csv | go run ./main.go -d, -f"1 2" -
+    # - go run ./main.go -f2 -d, tests/testdata/fourchords.csv | uniq | wc -l
 
   lint:
     - golangci-lint fmt
