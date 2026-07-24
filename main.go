@@ -48,7 +48,14 @@ func main() {
 				if err != nil {
 					log.Fatalf("string conversion of %s to integer", fieldNoStr)
 				}
-				fieldIdx := fieldNo - 1
+
+				var fieldIdx int
+				if fieldNo == 0 {
+					fieldIdx = 0
+				} else {
+					fieldIdx = fieldNo - 1
+				}
+
 				cfg.fieldIdx = append(cfg.fieldIdx, fieldIdx)
 			}
 
