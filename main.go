@@ -42,10 +42,16 @@ func main() {
 	}
 
 	w := bufio.NewWriter(os.Stdout)
-	r := bufio.NewReader(file)
-	err = cut(w, r, cfg)
+
+	err = cut(w, file, cfg)
 	if err != nil {
 		fmt.Fprintln(os.Stderr, fmt.Errorf("cut data: %w", err))
+		os.Exit(1)
+	}
+
+	err = w.Flush()
+	if err != nil {
+		fmt.Fprintln(os.Stderr, fmt.Errorf("flush stdout wrapper: %w", err))
 		os.Exit(1)
 	}
 }
@@ -82,7 +88,7 @@ func readArgs() (*Config, error) {
 				}
 
 				if fieldNo < 1 {
-					return nil, fmt.Errorf("values may not include zero")
+					return nil, fmt.Errorf("fields are numbered from 1")
 				}
 
 				fieldIdx := fieldNo - 1
@@ -115,8 +121,6 @@ func readArgs() (*Config, error) {
 func cut(w io.Writer, r io.Reader, cfg *Config) error {
 	s := bufio.NewScanner(r)
 	for s.Scan() {
-		l := strings.Builder{}
-
 		line := s.Text()
 		splits := strings.Split(line, cfg.delimiter)
 		if len(splits) == 1 {
@@ -127,6 +131,8 @@ func cut(w io.Writer, r io.Reader, cfg *Config) error {
 
 			continue
 		}
+
+		l := strings.Builder{}
 
 		for i, idx := range cfg.fieldIdx {
 			if len(splits) < idx+1 {
@@ -142,11 +148,6 @@ func cut(w io.Writer, r io.Reader, cfg *Config) error {
 		_, err := fmt.Fprintf(w, "%s\n", l.String())
 		if err != nil {
 			return fmt.Errorf("write to stdout: %w", err)
-		}
-
-		err = w.(*bufio.Writer).Flush()
-		if err != nil {
-			return fmt.Errorf("flush stdout wrapper: %w", err)
 		}
 	}
 
